@@ -1,6 +1,9 @@
 #ifndef TESTER_H
 #define TESTER_H
 
+#include "treap_library.h"
+#include "generator.h"
+
 #include <algorithm>
 
 template <class F>
