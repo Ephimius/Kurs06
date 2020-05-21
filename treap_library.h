@@ -63,6 +63,8 @@ private:
         std::shared_ptr<Node> GetRight(); 
         
         T& GetVal(); 
+        
+        size_t GetSize();
 
         ~Node() {
         }
@@ -96,6 +98,39 @@ public:
     static void Merge(Treap* rez, Treap* ll, Treap* rr);
 
     static void Split(Treap* what, Treap* ll, Treap* rr, int ls); 
+    
+    class Iterator {
+    private:
+        std::vector<std::shared_ptr<Node>> path;
+        
+    public:
+        Iterator(const std::vector<std::shared_ptr<Node>>& cur_path);
+        
+        bool operator==(const Iterator& iter);
+        
+        bool operator!=(const Iterator& iter);
+        
+        Iterator& operator++();
+        
+        Iterator operator++(int);
+        
+        Iterator& operator--();
+        
+        Iterator operator--(int);
+        
+        T& operator*();
+        
+        T* operator->();
+        
+        ~Iterator() {
+        }
+    };
+
+    Iterator begin();
+    
+    Iterator end();
+    
+    Iterator IterAt(size_t ind);
 
     ~Treap() {
     }
