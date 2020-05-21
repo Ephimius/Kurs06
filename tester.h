@@ -101,4 +101,36 @@ int TestingSM(size_t mins, size_t maxs, F func, int farg) {
     return -1;
 }
 
+template <class F>
+int TestingIterator(size_t mins, size_t maxs, F func, int farg) {
+    std::mt19937 rnd(std::chrono::steady_clock::now().time_since_epoch().count());
+    for (size_t cur_size = mins; cur_size < maxs; ++cur_size) {
+        std::vector<int> data = GenerateIntVector(cur_size);
+        Treap<int, F> treap(data, func);
+        size_t l = rnd() % cur_size;
+        size_t r = rnd() % cur_size;
+        if (l > r) {
+            std::swap(l, r);
+        }
+        ++r;
+        size_t ind = l;
+        for (typename Treap<int, F>::Iterator i = treap.IterAt(l); i != treap.IterAt(r); ++i) {
+            if (*i != data[ind]) {
+                return cur_size;
+            }
+            *i = func(*i, farg);
+            data[ind] = func(data[ind], farg);
+            ++ind;
+        }
+        ind = 0;
+        for (int& i : treap) {
+            if (i != data[ind]) {
+                return cur_size;
+            }
+            ++ind;
+        }
+    }
+    return -1;
+}
+
 #endif
