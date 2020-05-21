@@ -18,16 +18,6 @@ void PerTreap<T, F>::Node::ModifyUpdater(std::shared_ptr<T> modificator) {
 
 template <class T, class F>
 void PerTreap<T, F>::Node::Update() {
-    if (rev) {
-        rev = false;
-        std::swap(ll, rr);
-        if (ll.get() != nullptr) {
-            ll->rev = (1 ^ ll->rev);
-        }
-        if (rr.get() != nullptr) {
-            rr->rev = (1 ^ rr->rev);
-        }
-    }
     if (modif) {
         modif = false;
         if (ll.get() != nullptr) {
@@ -55,20 +45,20 @@ template <class T, class F>
 PerTreap<T, F>::Node::Node(T value, int prior, F funct) :
         priority(prior), siz(1), val(std::make_shared<T>(value)), 
         val_mod(std::make_shared<T>(T())), ll(), rr(), 
-        rev(false), func(funct), modif(false) {
+        func(funct), modif(false) {
 }
 
 template <class T, class F>
 PerTreap<T, F>::Node::Node(std::shared_ptr<T> value, int prior, F funct) :
         priority(prior), siz(1), val(value),
         val_mod(std::make_shared<T>(T())), ll(), rr(),
-        rev(false), func(funct), modif(false) {
+        func(funct), modif(false) {
 }
 
 template <class T, class F>
 PerTreap<T, F>::Node::Node(const Node& node) :
         priority(node.priority), siz(node.siz), val(std::make_shared<T>(*node.val)),
-        val_mod(std::make_shared<T>(*node.val_mod)), ll(), rr(), rev(node.rev), 
+        val_mod(std::make_shared<T>(*node.val_mod)), ll(), rr(), 
         func(node.func), modif(node.modif) {
     if (node.ll.get() != nullptr) {
         ll = std::make_shared<Node>(*node.ll);
@@ -86,7 +76,6 @@ PerTreap<T, F>::Node::Node(Node&& node) :
     val_mod = node.val_mod;
     node.val.reset();
     node.val_mod.reset();
-    rev = std::move(node.rev);
     func = std::move(node.func);
     modif = std::move(node.modif);
     node.ll.reset();
@@ -101,7 +90,6 @@ typename PerTreap<T, F>::Node& PerTreap<T, F>::Node::operator=(const Node& node)
     val_mod = std::make_shared(*node.val_mod);
     ll.reset();
     rr.reset();
-    rev = node.rev;
     func = node.func;
     modif = node.modif;
     if (node.ll.get() != nullptr) {
@@ -124,7 +112,6 @@ typename PerTreap<T, F>::Node& PerTreap<T, F>::Node::operator=(Node&& node) {
     val_mod = node.val_mod;
     node.val.reset();
     node.val_mod.reset();
-    rev = std::move(node.rev);
     func = std::move(node.func);
     modif = std::move(node.modif);
     node.ll.reset();
@@ -139,7 +126,7 @@ PerTreap<T, F>::Node::Node(const PerTreap<T, F>::Node& node,
                                   priority(node.priority), siz(node.siz), 
                                   val(std::make_shared<T>(*node.val)),
                                   val_mod(std::make_shared<T>(*node.val_mod)), 
-                                  ll(), rr(), rev(node.rev), 
+                                  ll(), rr(), 
                                   func(node.func), modif(node.modif) {
     if (node.ll.get() != nullptr) {
         if (nodes.count(node.ll) == 0) {
@@ -167,33 +154,9 @@ void PerTreap<T, F>::Node::Clone(const Node& node) {
     val = node.val;
     ll = node.ll;
     rr = node.rr;
-    rev = node.rev;
     val_mod = node.val_mod;
     func = node.func;
     modif = node.modif;
-}
-
-template <class T, class F>
-std::shared_ptr<typename PerTreap<T, F>::Node> PerTreap<T, F>::Node::Reverse(
-    std::shared_ptr<PerTreap<T, F>::Node> t_, size_t l, size_t r) {
-    t_->Update();
-    std::shared_ptr<Node> tl;
-    std::shared_ptr<Node> tm;
-    std::shared_ptr<Node> tmn;
-    std::shared_ptr<Node> tr;
-    std::shared_ptr<Node> tnew = std::make_shared<Node>(T(), 0, F());
-    std::shared_ptr<Node> tnewn = std::make_shared<Node>(T(), 0, F());
-    if (r <= l) {
-        return tnewn;
-    }
-    Split(t_, tmn, tr, r);
-    Split(tmn, tl, tm, l);
-    if (tm.get() != nullptr) {
-        tm->rev = (1 ^ tm->rev);
-    }
-    Merge(tnew, tl, tm);
-    Merge(tnewn, tnew, tr);
-    return tnewn;
 }
 
 template<class T, class F>
@@ -396,8 +359,24 @@ T& PerTreap<T, F>::Node::GetVal() {
 }
 
 template <class T, class F>
+size_t PerTreap<T, F>::Node::GetSize() {
+    Update();
+    return siz;
+}
+
+template <class T, class F>
+void PerTreap<T, F>::Node::Refresh() {
+    if (this != nullptr) {
+        Update();
+        ll->Refresh();
+        rr->Refresh();
+    }
+    return;
+}
+
+template <class T, class F>
 PerTreap<T, F>::PerTreap(const std::vector<T>& data, F funct, bool random, int seed) :
-        func(funct), size(data.size()) {
+        func(funct), size(data.size()), refreshed(true) {
     std::mt19937 rnd(random ? (unsigned)std::chrono::steady_clock::now().time_since_epoch().count() : seed);
     std::vector<std::shared_ptr<PerTreap<T, F>::Node>> treap;
     for (int i = 0; i < data.size(); ++i) {
@@ -408,7 +387,7 @@ PerTreap<T, F>::PerTreap(const std::vector<T>& data, F funct, bool random, int s
 
 template <class T, class F>
 PerTreap<T, F>::PerTreap(const PerTreap& treap) : 
-        func(treap.func), size(treap.size) {
+        func(treap.func), size(treap.size), refreshed(treap.refreshed) {
     std::map<std::shared_ptr<PerTreap<T, F>::Node>, std::shared_ptr<PerTreap<T, F>::Node>> nodes;
     for (size_t i = 0; i < treap.roots.size(); ++i) {
         if (treap.roots[i].get() != nullptr) {
@@ -419,7 +398,7 @@ PerTreap<T, F>::PerTreap(const PerTreap& treap) :
 
 template <class T, class F>
 PerTreap<T, F>::PerTreap(PerTreap&& treap) : 
-        roots(treap.roots), func(treap.func), size(treap.size) {
+        roots(treap.roots), func(treap.func), size(treap.size), refreshed(treap.refreshed) {
     treap.roots.clear();
     treap.size = 0;
 }
@@ -435,6 +414,7 @@ PerTreap<T, F>& PerTreap<T, F>::operator=(const PerTreap& treap) {
     }
     func = treap.func;
     size = treap.size;
+    refreshed = treap.refreshed;
 }
 
 template <class T, class F>
@@ -442,6 +422,7 @@ PerTreap<T, F>& PerTreap<T, F>::operator=(PerTreap&& treap) {
     roots = treap.roots;
     func = treap.func;
     size = treap.size;
+    refreshed = treap.refreshed;
     treap.roots.clear();
     treap.size = 0;
     return *this;
@@ -453,27 +434,11 @@ size_t PerTreap<T, F>::GetNumberOfStates() {
 }
 
 template <class T, class F>
-void PerTreap<T, F>::Reverse(size_t l, size_t r, size_t state) {
-    r = std::min(r, size);
-    if (l >= r || state >= roots.size()) {
-        return;
-    }
-    std::cerr << roots.size() << "@ ";
-    if (roots[state].get() != nullptr) {
-        roots.push_back(Node::Reverse(roots[state], l, r));
-        std::cerr << roots.size() << "@ ";
-    }
-}
-
-template <class T, class F>
-void PerTreap<T, F>::Reverse(size_t l, size_t r) {
-    std::cerr << roots.size() << "! ";
-    Reverse(l, r, roots.size() - 1);
-    std::cerr << roots.size() << "! ";
-}
-
-template <class T, class F>
 void PerTreap<T, F>::Modify(T modif, size_t l, size_t r, size_t state) {
+    if (state < roots.size() - 1 && !refreshed) {
+        roots.back()->Refresh();
+        refreshed = true;
+    }
     r = std::min(r, size);
     if (l >= r || state >= roots.size()) {
         return;
@@ -481,6 +446,7 @@ void PerTreap<T, F>::Modify(T modif, size_t l, size_t r, size_t state) {
     if (roots[state].get() != nullptr) {
         roots.push_back(Node::Modify(roots[state], l, r, std::make_shared<T>(modif)));
     }
+    refreshed = false;
 }
 
 template <class T, class F>
@@ -490,6 +456,10 @@ void PerTreap<T, F>::Modify(T modif, size_t l, size_t r) {
 
 template <class T, class F>
 void PerTreap<T, F>::MoveToEnd(size_t ls, size_t state) {
+    if (state < roots.size() - 1 && !refreshed) {
+        roots.back()->Refresh();
+        refreshed = true;
+    }
     ls = std::max(ls, size_t(0));
     ls = std::min(ls, size - 1);
     if (state < roots.size() && roots[state].get() != nullptr) {
@@ -504,6 +474,10 @@ void PerTreap<T, F>::MoveToEnd(size_t ls) {
 
 template <class T, class F>
 T PerTreap<T, F>::GetAt(size_t ind, size_t state) {
+    if (state < roots.size() - 1 && !refreshed) {
+        roots.back()->Refresh();
+        refreshed = true;
+    }
     if (state >= roots.size()) {
         throw std::length_error("Outside of memory");
     }
@@ -521,6 +495,10 @@ T PerTreap<T, F>::GetAt(size_t ind) {
 
 template <class T, class F>
 std::vector<T> PerTreap<T, F>::ToVector(size_t l, size_t r, size_t state) {
+    if (state < roots.size() - 1 && !refreshed) {
+        roots.back()->Refresh();
+        refreshed = true;
+    }
     if (state >= roots.size()) {
         throw std::length_error("Outside of memory");
     }
@@ -541,13 +519,20 @@ std::vector<T> PerTreap<T, F>::ToVector(size_t l, size_t r) {
 template <class T, class F>
 void PerTreap<T, F>::Merge(PerTreap* rez, PerTreap* ll, size_t state_l, 
                       PerTreap* rr, size_t state_r) {
-    rez = new PerTreap<T, F>({}, F());
+    if (state_l < ll->roots.size() - 1 && !ll->refreshed) {
+        ll->roots.back()->Refresh();
+        ll->refreshed = true;
+    }
+    if (state_r < rr->roots.size() - 1 && !rr->refreshed) {
+        rr->roots.back()->Refresh();
+        rr->refreshed = true;
+    }
+    if (rez == nullptr) {
+        rez = new PerTreap<T, F>({}, F());
+    }
     rez->roots.clear();
     std::shared_ptr<Node> temp_root;
     Node::Merge(temp_root, ll->roots[state_l], rr->roots[state_r]);
-    if (temp_root.get() == nullptr) {
-        std::cerr << "null ";
-    }
     rez->roots.push_back(temp_root);
     rez->size = ll->size + rr->size;
     ll->roots.clear();
@@ -564,6 +549,10 @@ void PerTreap<T, F>::Merge(PerTreap* rez, PerTreap* ll, PerTreap* rr) {
 template <class T, class F>
 void PerTreap<T, F>::Split(PerTreap* what, size_t state_w, PerTreap* ll, 
                       PerTreap* rr, int ls) {
+    if (state_w < what->roots.size() - 1 && !what->refreshed) {
+        what->roots.back()->Refresh();
+        what->refreshed = true;
+    }
     if (ll != nullptr) {
         ll->roots.clear();
         ll->func = what->func;
@@ -590,4 +579,135 @@ void PerTreap<T, F>::Split(PerTreap* what, size_t state_w, PerTreap* ll,
 template <class T, class F>
 void PerTreap<T, F>::Split(PerTreap* what, PerTreap* ll,  PerTreap* rr, int ls) {
     Split(what, what->roots.size() - 1, ll, rr, ls);
+}
+
+template <class T, class F>
+PerTreap<T, F>::Iterator::Iterator(const std::vector<std::shared_ptr<PerTreap<T, F>::Node>>& cur_path) :
+        path(cur_path) {
+}
+
+template <class T, class F>
+bool PerTreap<T, F>::Iterator::operator==(const Iterator& iter) {
+    return path == iter.path;
+}
+        
+template <class T, class F>
+bool PerTreap<T, F>::Iterator::operator!=(const Iterator& iter) {
+    return path != iter.path;
+}
+        
+template <class T, class F>
+typename PerTreap<T, F>::Iterator& PerTreap<T, F>::Iterator::operator++() {
+    if (path.size() == 0) {
+        return *this;
+    }
+    if (path.back()->GetRight().get() != nullptr) {
+        path.push_back(path.back()->GetRight());
+        while (path.back()->GetLeft().get() != nullptr) {
+            path.push_back(path.back()->GetLeft());
+        }
+    } else {
+        while (path.size() > 1 && path[path.size() - 2]->GetRight() == path.back()) {
+            path.pop_back();
+        }
+        path.pop_back();
+    }
+    return *this;
+}
+        
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::Iterator::operator++(int) {
+    Iterator last(*this);
+    operator++();
+    return last;
+}
+        
+template <class T, class F>
+typename PerTreap<T, F>::Iterator& PerTreap<T, F>::Iterator::operator--() {
+    if (path.size() == 0) {
+        return *this;
+    }
+    if (path.back()->GetLeft().get() != nullptr) {
+        path.push_back(path.back()->GetLeft());
+        while (path.back()->GetRight().get() != nullptr) {
+            path.push_back(path.back()->GetRight());
+        }
+    } else {
+        while (path.size() > 1 && path[path.size() - 2]->GetLeft() == path.back()) {
+            path.pop_back();
+        }
+        path.pop_back();
+    }
+    return *this;
+}
+        
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::Iterator::operator--(int) {
+    Iterator last(*this);
+    operator--();
+    return last;
+}
+        
+template <class T, class F>
+T& PerTreap<T, F>::Iterator::operator*() {
+    return path.back()->GetVal();
+}
+        
+template <class T, class F>
+T* PerTreap<T, F>::Iterator::operator->() {
+    return path.back()->val().get();
+}
+
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::begin(size_t state) {
+    if (state < roots.size() - 1 && !refreshed) {
+        roots.back()->Refresh();
+        refreshed = true;
+    }
+    std::vector<std::shared_ptr<Node>> cur_path;
+    cur_path.push_back(roots[state]);
+    while (cur_path.back().get() != nullptr && cur_path.back()->GetLeft().get() != nullptr) {
+        cur_path.push_back(cur_path.back()->GetLeft());
+    }
+    return Iterator(cur_path);
+}
+
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::begin() {
+    return begin(roots.size() - 1);
+}
+    
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::end() {
+    std::vector<std::shared_ptr<Node>> cur_path;
+    return Iterator(cur_path);
+}
+    
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::IterAt(size_t ind, size_t state) {
+    if (state < roots.size() - 1 && !refreshed) {
+        roots.back()->Refresh();
+        refreshed = true;
+    }
+    std::vector<std::shared_ptr<Node>> cur_path;
+    std::shared_ptr<Node> cur = roots[state];
+    while (ind < size && cur != nullptr) {
+        cur_path.push_back(cur);
+        size_t left_size = (cur->GetLeft().get() == nullptr ? 0 : cur->GetLeft()->GetSize());
+        if (ind == left_size) {
+            break;
+        } else if (ind < left_size) {
+            cur = cur->GetLeft();
+        } else {
+            ind -= left_size;
+            --ind;
+            cur = cur->GetRight();
+        }
+    }
+    return Iterator(cur_path);
+}
+    
+template <class T, class F>
+typename PerTreap<T, F>::Iterator PerTreap<T, F>::IterAt(size_t ind) {
+    return IterAt(ind, roots.size() - 1);
 }
