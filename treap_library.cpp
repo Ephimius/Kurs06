@@ -309,6 +309,12 @@ T& Treap<T, F>::Node::GetVal() {
 }
 
 template <class T, class F>
+size_t Treap<T, F>::Node::GetSize() {
+    Update();
+    return siz;
+}
+
+template <class T, class F>
 Treap<T, F>::Treap(const std::vector<T>& data, F funct, bool random, int seed) :
         root(), func(funct), size(data.size()) {
     std::mt19937 rnd(random ? (unsigned)std::chrono::steady_clock::now().time_since_epoch().count() : seed);
@@ -446,4 +452,117 @@ void Treap<T, F>::Split(Treap* what, Treap* ll, Treap* rr, int ls) {
     rr->size = what->size - ls;
     what->root.reset();
     what->size = 0;
+}
+
+template <class T, class F>
+Treap<T, F>::Iterator::Iterator(const std::vector<std::shared_ptr<Treap<T, F>::Node>>& cur_path) :
+        path(cur_path) {
+}
+
+template <class T, class F>
+bool Treap<T, F>::Iterator::operator==(const Iterator& iter) {
+    return path == iter.path;
+}
+        
+template <class T, class F>
+bool Treap<T, F>::Iterator::operator!=(const Iterator& iter) {
+    return path != iter.path;
+}
+        
+template <class T, class F>
+typename Treap<T, F>::Iterator& Treap<T, F>::Iterator::operator++() {
+    if (path.size() == 0) {
+        return *this;
+    }
+    if (path.back()->GetRight().get() != nullptr) {
+        path.push_back(path.back()->GetRight());
+        while (path.back()->GetLeft().get() != nullptr) {
+            path.push_back(path.back()->GetLeft());
+        }
+    } else {
+        while (path.size() > 1 && path[path.size() - 2]->GetRight() == path.back()) {
+            path.pop_back();
+        }
+        path.pop_back();
+    }
+    return *this;
+}
+        
+template <class T, class F>
+typename Treap<T, F>::Iterator Treap<T, F>::Iterator::operator++(int) {
+    Iterator last(*this);
+    operator++();
+    return last;
+}
+        
+template <class T, class F>
+typename Treap<T, F>::Iterator& Treap<T, F>::Iterator::operator--() {
+    if (path.size() == 0) {
+        return *this;
+    }
+    if (path.back()->GetLeft().get() != nullptr) {
+        path.push_back(path.back()->GetLeft());
+        while (path.back()->GetRight().get() != nullptr) {
+            path.push_back(path.back()->GetRight());
+        }
+    } else {
+        while (path.size() > 1 && path[path.size() - 2]->GetLeft() == path.back()) {
+            path.pop_back();
+        }
+        path.pop_back();
+    }
+    return *this;
+}
+        
+template <class T, class F>
+typename Treap<T, F>::Iterator Treap<T, F>::Iterator::operator--(int) {
+    Iterator last(*this);
+    operator--();
+    return last;
+}
+        
+template <class T, class F>
+T& Treap<T, F>::Iterator::operator*() {
+    return path.back()->GetVal();
+}
+        
+template <class T, class F>
+T* Treap<T, F>::Iterator::operator->() {
+    return path.back()->val().get();
+}
+
+template <class T, class F>
+typename Treap<T, F>::Iterator Treap<T, F>::begin() {
+    std::vector<std::shared_ptr<Node>> cur_path;
+    cur_path.push_back(root);
+    while (cur_path.back().get() != nullptr && cur_path.back()->GetLeft().get() != nullptr) {
+        cur_path.push_back(cur_path.back()->GetLeft());
+    }
+    return Iterator(cur_path);
+}
+    
+template <class T, class F>
+typename Treap<T, F>::Iterator Treap<T, F>::end() {
+    std::vector<std::shared_ptr<Node>> cur_path;
+    return Iterator(cur_path);
+}
+    
+template <class T, class F>
+typename Treap<T, F>::Iterator Treap<T, F>::IterAt(size_t ind) {
+    std::vector<std::shared_ptr<Node>> cur_path;
+    std::shared_ptr<Node> cur = root;
+    while (ind < size && cur != nullptr) {
+        cur_path.push_back(cur);
+        size_t left_size = (cur->GetLeft().get() == nullptr ? 0 : cur->GetLeft()->GetSize());
+        if (ind == left_size) {
+            break;
+        } else if (ind < left_size) {
+            cur = cur->GetLeft();
+        } else {
+            ind -= left_size;
+            --ind;
+            cur = cur->GetRight();
+        }
+    }
+    return Iterator(cur_path);
 }
