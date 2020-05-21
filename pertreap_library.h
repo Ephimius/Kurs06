@@ -19,7 +19,6 @@ private:
         std::shared_ptr<T> val_mod;
         std::shared_ptr<Node> ll;
         std::shared_ptr<Node> rr;
-        bool rev;
         F func;
         bool modif;
 
@@ -36,13 +35,13 @@ private:
         
         Node(std::shared_ptr<T> value, int prior, F funct);
         
-        Node(const Node& node); 
+        Node(const Node& node);
         
-        Node(Node&& node); 
+        Node(Node&& node);
         
-        Node& operator=(const Node& node); 
+        Node& operator=(const Node& node);
         
-        Node& operator=(Node&& node); 
+        Node& operator=(Node&& node);
         
         Node(const Node& node, std::map<std::shared_ptr<Node>, std::shared_ptr<Node>>& nodes);
         
@@ -72,20 +71,9 @@ private:
         
         T& GetVal(); 
         
-        /*int Visit() { //DEBUG
-            Update();
-            int ans = 0;
-            std::cerr << "(";
-            if (ll.get() != nullptr) {
-                ans = ll->Visit();
-            }
-            std::cerr << "," << *val << ":" << siz;
-            if (rr.get() != nullptr) {
-                ans = std::max(ans, rr->Visit());
-            }
-            std::cerr << ")";
-            return ans + 1;
-        }*/
+        size_t GetSize(); 
+        
+        void Refresh();
 
         ~Node() {
         }
@@ -94,6 +82,7 @@ private:
     std::vector<std::shared_ptr<Node>> roots;
     F func;
     size_t size;
+    bool refreshed;
 
 public:
     PerTreap(const std::vector<T>& data, F funct, bool random = true, int seed = 0); 
@@ -107,10 +96,6 @@ public:
     PerTreap& operator=(PerTreap&& treap);
     
     size_t GetNumberOfStates();
-
-    void Reverse(size_t l, size_t r, size_t state);
-
-    void Reverse(size_t l, size_t r);
 
     void Modify(T modif, size_t l, size_t r, size_t state);
 
@@ -138,9 +123,42 @@ public:
 
     static void Split(PerTreap* what, PerTreap* ll, PerTreap* rr, int ls); 
     
-    /*int Visit(int i) { //DEBUG
-        return roots[i]->Visit();
-    }*/
+    class Iterator { 
+    private:
+        std::vector<std::shared_ptr<Node>> path;
+        
+    public:
+        Iterator(const std::vector<std::shared_ptr<Node>>& cur_path);
+        
+        bool operator==(const Iterator& iter);
+        
+        bool operator!=(const Iterator& iter);
+        
+        Iterator& operator++();
+        
+        Iterator operator++(int);
+        
+        Iterator& operator--();
+        
+        Iterator operator--(int);
+        
+        T& operator*();
+        
+        T* operator->();
+        
+        ~Iterator() {
+        }
+    };
+
+    Iterator begin(size_t state);
+
+    Iterator begin();
+    
+    Iterator end();
+    
+    Iterator IterAt(size_t ind, size_t state);
+    
+    Iterator IterAt(size_t ind);
 
     ~PerTreap() {
     }
