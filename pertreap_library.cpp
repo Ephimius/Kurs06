@@ -398,8 +398,8 @@ PerTreap<T, F>::PerTreap(const PerTreap& treap) :
 
 template <class T, class F>
 PerTreap<T, F>::PerTreap(PerTreap&& treap) : 
-        roots(treap.roots), func(treap.func), size(treap.size), refreshed(treap.refreshed) {
-    treap.roots.clear();
+        func(treap.func), size(treap.size), refreshed(treap.refreshed) {
+    roots = std::move(treap.roots);
     treap.size = 0;
 }
 
@@ -419,7 +419,7 @@ PerTreap<T, F>& PerTreap<T, F>::operator=(const PerTreap& treap) {
 
 template <class T, class F>
 PerTreap<T, F>& PerTreap<T, F>::operator=(PerTreap&& treap) {
-    roots = treap.roots;
+    roots = std::move(treap.roots);
     func = treap.func;
     size = treap.size;
     refreshed = treap.refreshed;
